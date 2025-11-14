@@ -55,6 +55,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     locales \
     ripgrep \
+    xclip \
     && sed -i '/de_DE.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen \
     && apt-get clean \
@@ -117,6 +118,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     locales \
     ripgrep \
+    xclip \
     && sed -i '/de_DE.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen \
     && apt-get clean \
@@ -171,6 +173,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     locales \
     ripgrep \
+    xclip \
     && sed -i '/de_DE.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen \
     && apt-get clean \
@@ -181,10 +184,12 @@ COPY --from=builder-php /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=builder-php /usr/local/bin/lazygit /usr/local/bin/
 
 RUN cd /usr/local/lib/node_modules && \
-    ln -sf /usr/local/lib/node_modules/intelephense/lib/intelephense.js /usr/local/bin/intelephense && \
     ln -sf /usr/local/lib/node_modules/dockerfile-language-server-nodejs/bin/docker-langserver /usr/local/bin/docker-langserver && \
     ln -sf /usr/local/lib/node_modules/@microsoft/compose-language-service/bin/docker-compose-langserver /usr/local/bin/docker-compose-langserver && \
     ln -sf /usr/local/lib/node_modules/yaml-language-server/bin/yaml-language-server /usr/local/bin/yaml-language-server
+
+RUN echo '#!/bin/sh\nexec node /usr/local/lib/node_modules/intelephense/lib/intelephense.js "$@"' > /usr/local/bin/intelephense && \
+    chmod +x /usr/local/bin/intelephense
 COPY --from=builder-php /root/.config/nvim /root/.config/nvim
 COPY --from=builder-php /root/.local/share/nvim /root/.local/share/nvim
 COPY --from=builder-php /root/.local/state/nvim /root/.local/state/nvim

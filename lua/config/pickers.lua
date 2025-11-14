@@ -19,7 +19,7 @@ function M.setup()
 
   -- Setup keymaps
   vim.keymap.set('n', '<leader>f', ":Pick files<CR>", { desc = 'Pick files' })
-  vim.keymap.set('n', '<leader>g', pick_git_files, { desc = 'Pick git files' })
+  vim.keymap.set('n', '<leader>F', pick_git_files, { desc = 'Pick git files' })
   vim.keymap.set('n', '<leader>/', pick_grep, { desc = 'Live grep' })
   vim.keymap.set('n', '<leader>h', ":Pick help<CR>", { desc = 'Pick help' })
 end

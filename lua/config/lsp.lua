@@ -9,6 +9,88 @@ function M.setup(servers)
   -- Set LSP log level to ERROR to reduce noise from large file warnings
   vim.lsp.log.level = vim.log.levels.ERROR
 
+  -- Configure intelephense (PHP)
+  vim.lsp.config.intelephense = {
+    cmd = { "intelephense", "--stdio" },
+    filetypes = { "php" },
+    root_markers = { "composer.json", ".git", "index.php", ".editorconfig" },
+    single_file_support = true,
+    capabilities = capabilities,
+    settings = {
+      intelephense = {
+        files = {
+          maxSize = 5000000,
+          associations = { "**/*.php", "**/*.phtml" },
+          exclude = {
+            "**/vendor/**/test/**",
+            "**/vendor/**/tests/**",
+            "**/Test/**",
+            "**/Tests/**",
+            "**/.git/**",
+            "**/node_modules/**",
+          },
+        },
+        environment = {
+          includePaths = { "/workspace" },
+          -- phpVersion is auto-detected from composer.json or can be overridden per project
+          -- by creating a .intelephense/settings.json file in the project root
+        },
+        completion = {
+          triggerParameterHints = true,
+          insertUseDeclaration = true,
+          fullyQualifyGlobalConstantsAndFunctions = false,
+        },
+        diagnostics = {
+          enable = true,
+        },
+      },
+    },
+  }
+
+  -- Configure gopls (Go)
+  vim.lsp.config.gopls = {
+    cmd = { "gopls" },
+    filetypes = { "go", "gomod", "gowork", "gotmpl" },
+    root_markers = { "go.work", "go.mod", ".git" },
+    capabilities = capabilities,
+    settings = {
+      gopls = {
+        usePlaceholders = true,
+        analyses = {
+          unusedparams = true,
+          nilness = true,
+          unusedwrite = true,
+          useany = true,
+        },
+        staticcheck = true,
+      },
+    },
+  }
+
+  -- Configure dockerls
+  vim.lsp.config.dockerls = {
+    cmd = { "docker-langserver", "--stdio" },
+    filetypes = { "dockerfile" },
+    root_markers = { ".git" },
+    capabilities = capabilities,
+  }
+
+  -- Configure docker_compose_language_service
+  vim.lsp.config.docker_compose_language_service = {
+    cmd = { "docker-compose-langserver", "--stdio" },
+    filetypes = { "yaml.docker-compose" },
+    root_markers = { "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml" },
+    capabilities = capabilities,
+  }
+
+  -- Configure yamlls
+  vim.lsp.config.yamlls = {
+    cmd = { "yaml-language-server", "--stdio" },
+    filetypes = { "yaml", "yaml.docker-compose" },
+    root_markers = { ".git" },
+    capabilities = capabilities,
+  }
+
   -- Enable LSP servers
   vim.lsp.enable(servers)
 
@@ -31,21 +113,26 @@ function M.setup(servers)
             return
           end
           local client = vim.lsp.get_client_by_id(ev.data.client_id)
-          local params = vim.lsp.util.make_range_params(nil, client.offset_encoding or "utf-16")
-          params.context = { only = { "source.organizeImports" } }
 
-          local result = vim.lsp.buf_request_sync(ev.buf, "textDocument/codeAction", params, 1000)
-          for _, res in pairs(result or {}) do
-            for _, action in pairs(res.result or {}) do
-              if action.edit or type(action.command) == "table" then
-                if action.edit then
-                  vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+          -- Only try organize imports for servers that support it (e.g., gopls)
+          -- Skip for intelephense (PHP) as it doesn't support this code action
+          if client and client.name ~= "intelephense" then
+            local params = vim.lsp.util.make_range_params(nil, client.offset_encoding or "utf-16")
+            params.context = { only = { "source.organizeImports" } }
+
+            local result = vim.lsp.buf_request_sync(ev.buf, "textDocument/codeAction", params, 1000)
+            for _, res in pairs(result or {}) do
+              for _, action in pairs(res.result or {}) do
+                if action.edit or type(action.command) == "table" then
+                  if action.edit then
+                    vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+                  end
+                  if type(action.command) == "table" then
+                    vim.lsp.buf.execute_command(action.command)
+                  end
+                else
+                  vim.lsp.buf.execute_command(action)
                 end
-                if type(action.command) == "table" then
-                  vim.lsp.buf.execute_command(action.command)
-                end
-              else
-                vim.lsp.buf.execute_command(action)
               end
             end
           end
